@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>ИСУ-Табель Экспресс — Вход</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #2c3e50, #4a6075); display: flex; align-items: center; justify-content: center; padding: 15px; }
+  .card { background: #fff; padding: 30px 35px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.4); width: 100%; max-width: 400px; text-align: center; position: relative; }
+  .card .icon { font-size: 40px; margin-bottom: 10px; }
+  .card h2 { margin: 0 0 5px; color: #2c3e50; font-size: 18px; }
+  .card p  { margin: 0 0 20px; color: #777; font-size: 12px; }
+  .card input { width: 100%; padding: 10px 12px; font-size: 14px; border: 2px solid #ddd; border-radius: 6px; outline: none; margin-bottom: 10px; transition: border-color .15s; }
+  .card input:focus { border-color: #9c27b0; }
+  .err { color: #e74c3c; font-size: 12px; min-height: 16px; margin-bottom: 6px; line-height: 1.3; }
+  .card button { width: 100%; padding: 11px; font-size: 14px; font-weight: bold; background: #9c27b0; color: #fff; border: none; border-radius: 6px; cursor: pointer; transition: background .15s; }
+  .card button:hover:not(:disabled) { background: #7b1fa2; }
+  .card button:disabled { opacity: .5; cursor: not-allowed; background: #9e9e9e; }
+  .register-link { display: block; margin-top: 15px; font-size: 12px; color: #9c27b0; text-decoration: none; cursor: pointer; }
+  .register-link:hover { text-decoration: underline; }
+  
+  .loader { display: none; text-align: center; color: #fff; font-size: 14px; }
+  .loader .spinner { width: 40px; height: 40px; margin: 0 auto 15px; border: 4px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: #fff; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+  .modal-box h3 { margin: 0 0 10px; color: #2c3e50; }
+  .modal-box p { font-size: 13px; color: #555; margin-bottom: 15px; line-height: 1.4; }
+  
+  .copy-block { margin-bottom: 15px; text-align: left; }
+  .copy-label { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px; display: block; }
+  .copy-input {
+    background: #f9f9f9; border: 2px solid #e0e0e0; border-radius: 8px; padding: 10px 12px;
+    font-family: monospace; font-size: 13px; color: #333; margin-bottom: 6px;
+    white-space: nowrap; overflow-x: auto;
+  }
+  .copy-input::-webkit-scrollbar { height: 4px; }
+  .copy-input::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+  
+  .copy-btn {
+    background-color: #f3e5f5; color: #9c27b0; border: 1px solid #e1bee7; border-radius: 6px;
+    padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: all 0.2s; width: 100%; text-align: center;
+  }
+  .copy-btn:hover { background-color: #e1bee7; }
+  .copy-btn.copied { background-color: #d1fae5; color: #10b981; border-color: #a7f3d0; }
+  
+  .modal-action-btn {
+    padding: 12px; font-size: 14px; border-radius: 6px; cursor: pointer; border: none;
+    width: 100%; font-weight: bold; background: #eee; color: #333; transition: background 0.2s; margin-top: 10px;
+  }
+  .modal-action-btn:hover { background: #ddd; }
+</style>
+</head>
+<body>
+
+<div class="card" id="loginCard">
+  <div class="icon">🔒</div>
+  <h2>ИСУ-Табель Экспресс</h2>
+  <p>Введите пароль для доступа</p>
+  <input type="password" id="passwordInput" placeholder="Пароль" autocomplete="off">
+  <div class="err" id="errBox"></div>
+  <button id="submitBtn">Войти</button>
+  <a class="register-link" id="registerBtn">🔑 Нет доступа? Запросить</a>
+</div>
+
+<div class="loader" id="loader">
+  <div class="spinner"></div>
+  Загрузка приложения…
+</div>
+
+<div class="modal-overlay" id="regModal">
+  <div class="modal-box">
+    <h3>Запрос доступа</h3>
+    <p>Для завершения регистрации скопируйте ваш код устройства и отправьте его администратору на почту:</p>
+    
+    <div class="copy-block">
+      <span class="copy-label">Почта администратора:</span>
+      <div class="copy-input" id="emailText">danirsafargaliev@gmail.com</div>
+      <button class="copy-btn" id="copyEmailBtn">📋 Копировать email</button>
+    </div>
+    
+    <div class="copy-block">
+      <span class="copy-label">Ваш код устройства (ID):</span>
+      <div class="copy-input" id="hwidText">Определение...</div>
+      <button class="copy-btn" id="copyHwidBtn">📋 Копировать ID</button>
+    </div>
+    
+    <button class="modal-action-btn" id="btnClose">Закрыть</button>
+  </div>
+</div>
+
+<script>
+try {
+  (function () {
+    // ВСТАВИТЬ МАССИВЫ ИЗ ГЕНЕРАТОРА
+var ALPHABET_URL = ["DuF3ED(Vh5bQ^{>/","!fh[26b~})6xttf4","io}OOvtfVXSV`|xk","t3f#[U'Hlpf+P^i3","Xdatqjoscngb1,a*","KX']:u:@mwbUDL<t",")I.z-kF(2o@.|z/o","`N=qv/~\\2Fm@3ecn","mlP0wlAEgjAa4bo*","\\7k!NpdJB)ZZ%b9O","KTiJi\\[_|N3ZODb!","#.R9!i9:L9bP<zd-","gY-#:E7m!3]69(|Q","gredi2fA=A\"@cCJ}","ft|}L6y'.@^-wM3i","d3E.fh?/qecDwYRE",";jt~dYD0&3pu9>U0","=uIx}}Fc*QwIVbQf","4~$&UK+YqE%vnn.;","|8/3/%2w4cGC4X8q","odKz\\G>&+C>1N?CH","4SUhQ5ammzrd)c,6",")dZ=+zMt:+{/Q6]J","SQ<oCxn:kR!KsrE*","9@uKe6hn=*1TF5&v","2%`=l]k$_f[%bp$k","d\\cT5G(,nWEkSEo8","jAKWNSD)F2ztKrsu","q/7Dh};[cy,(?gd}","qOm0BaPw!rUg?Kt$","\\?t!YePi\"NH+\\kZE",";ydn}]8YTtGv~Y2b","FQ]'@nqA_C]-,`>$","^r0!s99XX{9/g=g[","}v~TYReq0|a*A>xD","$9uusW|m=<-J+c7@","bO_4;\"-iZ\"o0yQL]",",qH_f{BwAn6=(FTr","W+Q>i4mYS1J]t(E{","lGv^fp;M/|\\8QYgM","2l{V97of#>lOc<B4","txyiIf^D/`|*i49;","MmP0iP4Nw=&,Dj)l","L+LNC$QT\"$)MecB*","*fJ9s*,n,7XM+5Y)","{6z8hZLd,+S/{{8h","!}TPO{C_TVJc0jZy","=Jz=nT;sonPwJcsm","U=o{@1~5;zn_*jSU","iO[at{j_t6Q,@]]q","eeBw[b$VXK%#q=sl","{()v]R@Q=:#%RPcn",")]<KAAtL]hAP2xd<","76Weh9.xP_CF-G%s","I@/d1ZNCKcxV*)#^",")^n8VcmpPKaF]o8$","n5@hgNO^5yspo5Kb","vvWlp![|-ygC&J{c","w^:A.wN:jf#GG:(I",".8M03t,{j%TN6QG|","T+bqFKK4gHs5vRvq","i7r)dinl+?#+(SDT","[r~zycU8v4C]H6\\7","[r.oo4FRe<5+`[Iy","==#I'lAxfV_5hH!-","6y0Wd4=F}/E[=hb6","64HTdgmvY\\T:<-\\X","}i.pjj|N=a!4HHCl","mJTn,^ki\\0ryUn\\j","7Cjs&fn5OLh[$]yq"];   
+  
+var ALPHABET_TOKEN = ["&LX!-o@Wg$I]&*eh","|`'!$xQt@fE%hES$",":M>KuxpQPx0fl46k","zmENgaRd)_}p<8ZB","CIIK_0jhV'D+J|?'","s!\\_@.OiDq0rhN(q","dvW>\\(5U0\\FSw/61","AW:W`a1;[HzWI0'{","rL+Ptug9U.~P5;Xh","k]a!+XSp`f\"8,_J4","8]L7dpr:4#Ef#+`c","?w8DJ2p::xL^2Pks","B$ac)FsvTzl[qU!#","uF}nB!|.r~^m\";p?","05=e/Jboz[tS'*To","XxH&NNZ[%GNULVc!","wf:o8UQ^@7yunWA+","_=R$=`79owyP*lE,","*Ox;[t:2wTY1RP7-","x+)rU8X:lWMro>GX","5O5@.`.t0.h4/1um","ePFO~_1vU^,p,mNN","RE0T-Bx/+(dJC1p%","'fRXm$_5g{4b?e<e","jumvc,4X/;WH1vQB","A,N~bU\\GNPBw'rYT","MMGz>%tt&Fp@aNiI","V<Fn':X5+nM@laJk","HtIUV7v+^J1~fqP]","2'y#&E?L*c%IeX3D","aUcFhw$?&ipuMJIV","e.-z66r8d5Z8`|_8","R=X{}g\"u{Pfk9OW4","(FTr@joiom,'#~$Q","2RO:9l0~#>.>2@;\\","P<K\"7%duQ@YRH`~]","FL4ok+Wn4\\bNPWv~","/\"Y075x-z9-xK9?A","(\\:}<A0WnrU\\k<d2","jL,}f_IoxV|`^>f$"];
+    var SESSION_KEY = 'isu_tabel_auth_v41';
+    var LOCK_KEY    = 'isu_tabel_lock_until';
+    var ADMIN_EMAIL = 'danirsafargaliev@gmail.com';
+
+    var card   = document.getElementById('loginCard');
+    var loader = document.getElementById('loader');
+    var input  = document.getElementById('passwordInput');
+    var err    = document.getElementById('errBox');
+    var btn    = document.getElementById('submitBtn');
+    var regBtn = document.getElementById('registerBtn');
+    var regModal = document.getElementById('regModal');
+    var hwidText = document.getElementById('hwidText');
+    var btnClose = document.getElementById('btnClose');
+
+    var failCount = 0;
+    var timerInterval = null;
+
+    async function getHardwareId() {
+      var data = [
+        navigator.userAgent,
+        navigator.language,
+        screen.colorDepth,
+        screen.width + 'x' + screen.height,
+        new Date().getTimezoneOffset(),
+        navigator.hardwareConcurrency || 'unknown'
+      ].join('|');
+
+      var hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
+      var hash = Array.from(new Uint8Array(hashBuf)).map(x => x.toString(16).padStart(2, '0')).join('');
+      
+      return 'dev-' + hash.substring(0, 16);
+    }
+
+    function copyToClipboard(text, btn) {
+      if (!text || text === 'Определение...') return;
+      var original = btn.innerHTML;
+
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(function() {
+          showCopiedState(btn, original);
+        }).catch(function() {
+          fallbackCopy(text, btn, original);
+        });
+      } else {
+        fallbackCopy(text, btn, original);
+      }
+    }
+
+    function fallbackCopy(text, btn, originalHtml) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.top = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showCopiedState(btn, originalHtml);
+      } catch (err) {
+        alert('Не удалось скопировать');
+      }
+      document.body.removeChild(ta);
+    }
+
+    function showCopiedState(btn, originalHtml) {
+      btn.classList.add('copied');
+      btn.innerHTML = '✅ Скопировано';
+      setTimeout(function() {
+        btn.classList.remove('copied');
+        btn.innerHTML = originalHtml;
+      }, 1000); 
+    }
+
+    document.getElementById('copyEmailBtn').addEventListener('click', function() {
+      copyToClipboard(ADMIN_EMAIL, this);
+    });
+
+    document.getElementById('copyHwidBtn').addEventListener('click', function() {
+      copyToClipboard(hwidText.textContent, this);
+    });
+
+    regBtn.addEventListener('click', async function(e) {
+      e.preventDefault();
+      hwidText.textContent = 'Определение...';
+      regModal.classList.add('open');
+      var id = await getHardwareId();
+      hwidText.textContent = id;
+    });
+
+    function closeRegModal() { regModal.classList.remove('open'); }
+    btnClose.addEventListener('click', closeRegModal);
+    regModal.addEventListener('click', function(e) { if (e.target === regModal) closeRegModal(); });
+
+    function checkLock() {
+      var lockUntil = 0;
+      try { lockUntil = parseInt(localStorage.getItem(LOCK_KEY) || '0', 10); } catch (e) {}
+      var now = Date.now();
+      
+      if (now < lockUntil) {
+        btn.disabled = true; input.disabled = true;
+        var secLeft = Math.ceil((lockUntil - now) / 1000);
+        btn.textContent = 'Подождите ' + secLeft + ' сек.';
+        
+        if (!timerInterval) {
+          timerInterval = setInterval(function() {
+            var currentNow = Date.now();
+            var currentLock = 0;
+            try { currentLock = parseInt(localStorage.getItem(LOCK_KEY) || '0', 10); } catch (e) {}
+            
+            if (currentNow >= currentLock) {
+              clearInterval(timerInterval); timerInterval = null;
+              btn.disabled = false; input.disabled = false;
+              btn.textContent = 'Войти'; err.textContent = '';
+              try { localStorage.removeItem(LOCK_KEY); } catch (e) {}
+            } else {
+              btn.textContent = 'Подождите ' + Math.ceil((currentLock - currentNow) / 1000) + ' сек.';
+            }
+          }, 500);
+        }
+        return true;
+      }
+      return false;
+    }
+    checkLock();
+
+    function sha256(t) {
+      var b = new TextEncoder().encode(t);
+      return crypto.subtle.digest('SHA-256', b).then(function (h) {
+        return Array.prototype.map.call(new Uint8Array(h), function (x) { return x.toString(16).padStart(2, '0'); }).join('');
+      });
+    }
+
+    function buildData(hash) {
+      if (!ALPHABET_URL || !ALPHABET_TOKEN) return null;
+      var url = '';
+      for (var i = 0; i < ALPHABET_URL.length; i++) url += ALPHABET_URL[i][parseInt(hash[i % hash.length], 16)];
+      var token = '';
+      for (var i = 0; i < ALPHABET_TOKEN.length; i++) token += ALPHABET_TOKEN[i][parseInt(hash[i % hash.length], 16)];
+      return { url: url, token: token };
+    }
+
+    function showError(msg) {
+      loader.style.display = 'none';
+      card.style.display = 'block';
+      err.textContent = msg || '';
+      if (!checkLock()) btn.disabled = false;
+      input.value = '';
+      if (!input.disabled) input.focus();
+    }
+
+    function loadApp(hash) {
+      var data = buildData(hash);
+      if (!data || data.url.indexOf('https://') !== 0 || data.token.indexOf('ghp_') !== 0) {
+        showError('❌ Неверный пароль');
+        return;
+      }
+      
+      card.style.display = 'none';
+      loader.style.display = 'block';
+
+      fetch(data.url, {
+        cache: 'no-store',
+        headers: { 'Authorization': 'token ' + data.token, 'Accept': 'application/vnd.github.v3.raw' }
+      })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.text();
+      })
+      .then(function (code) {
+        if (/^\s*<!DOCTYPE/i.test(code) || /^\s*<html/i.test(code)) throw new Error('Вернулся HTML.');
+        var blob = new Blob([code], { type: 'application/javascript' });
+        var blobUrl = URL.createObjectURL(blob);
+        var s = document.createElement('script');
+        s.src = blobUrl;
+        s.onload = function () {
+          URL.revokeObjectURL(blobUrl);
+          loader.style.display = 'none';
+          document.body.style.background = '#fff';
+          document.body.style.display = 'block';
+          document.body.style.padding = '0';
+        };
+        s.onerror = function () {
+          URL.revokeObjectURL(blobUrl);
+          try { sessionStorage.removeItem(SESSION_KEY); sessionStorage.removeItem(SESSION_KEY + '_hash'); } catch(e) {}
+          showError('❌ Ошибка выполнения app.js');
+        };
+        document.body.appendChild(s);
+      })
+      .catch(function (e) {
+        try { sessionStorage.removeItem(SESSION_KEY); sessionStorage.removeItem(SESSION_KEY + '_hash'); } catch(err) {}
+        showError('❌ Не удалось загрузить: ' + e.message);
+      });
+    }
+
+    function tryUnlock() {
+      if (checkLock()) return;
+      err.textContent = '';
+      if (!input.value) { err.textContent = 'Введите пароль'; return; }
+
+      btn.disabled = true;
+      btn.textContent = 'Проверка...';
+
+      sha256(input.value).then(function (hash) {
+        var data = buildData(hash);
+        
+        if (data && data.url.indexOf('https://') === 0 && data.token.indexOf('ghp_') === 0) {
+          try { sessionStorage.setItem(SESSION_KEY, '1'); sessionStorage.setItem(SESSION_KEY + '_hash', hash); } catch(e) {}
+          loadApp(hash);
+        } else {
+          failCount++;
+          if (failCount >= 3) {
+            try { localStorage.setItem(LOCK_KEY, String(Date.now() + 10000)); } catch(e) {}
+            failCount = 0; input.value = ''; btn.textContent = 'Войти'; checkLock();
+          } else {
+            err.textContent = '❌ Неверный пароль';
+            input.value = ''; input.focus(); btn.disabled = false; btn.textContent = 'Войти';
+          }
+        }
+      }).catch(function () {
+        err.textContent = 'Ошибка проверки пароля'; btn.disabled = false; btn.textContent = 'Войти';
+      });
+    }
+
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.action === 'logout') {
+        try { sessionStorage.removeItem(SESSION_KEY); sessionStorage.removeItem(SESSION_KEY + '_hash'); } catch(e) {}
+        location.reload();
+      }
+    });
+
+    btn.addEventListener('click', tryUnlock);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !btn.disabled) tryUnlock(); });
+    
+    try {
+      if (sessionStorage.getItem(SESSION_KEY) === '1') {
+        var savedHash = sessionStorage.getItem(SESSION_KEY + '_hash');
+        if (savedHash) { loadApp(savedHash); return; }
+      }
+    } catch(e) {}
+
+    setTimeout(function () { if (!btn.disabled) input.focus(); }, 100);
+  })();
+} catch (err) {
+  document.body.style.background = '#fff';
+  document.body.innerHTML = '<div style="color:red; padding:20px; font-family:monospace;"><b>Критическая ошибка:</b><br>' + err.message + '</div>';
+}
+</script>
+
+</body>
+</html>
